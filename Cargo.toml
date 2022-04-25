@@ -1,0 +1,12 @@
+[package]
+name = "ffmpeg-video-decoder"
+version = "0.0.1"
+edition = "2021"
+
+[features]
+image = ["dep:image"]
+build = ["ffmpeg-sys/build"]
+
+[dependencies]
+ffmpeg-sys = "4.3.3"
+image = { version = "0.24", optional = true }
