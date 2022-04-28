@@ -5,8 +5,11 @@ edition = "2021"
 
 [features]
 image = ["dep:image"]
-build = ["ffmpeg-sys/build"]
+build = ["ffmpeg/build"]
 
 [dependencies]
-ffmpeg-sys = "4.3.3"
+thiserror = "1.0"
+crossbeam = "0.8.1"
+ffmpeg = { package = "ffmpeg-sys", version = "4.3.3" }
+
 image = { version = "0.24", optional = true }
