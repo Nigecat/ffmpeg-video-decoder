@@ -1,8 +1,7 @@
 //! Internal helpers to interface with the c ffmpeg code
 
-use std::ffi::{self, CString};
 use std::path::Path;
-use std::{cmp, ptr};
+use std::{cmp, ffi, ptr};
 
 #[repr(C)]
 pub struct Stream {
@@ -21,32 +20,32 @@ pub unsafe extern "C" fn read_stream(ptr: *mut ffi::c_void, buf: *mut u8, size: 
     size as i32
 }
 
-pub fn path_to_cstring(_path: &Path) -> CString {
-    unimplemented!();
+pub fn path_to_raw(path: &Path) -> Vec<u8> {
+    // source: https://stackoverflow.com/a/57667836
 
-    // let mut buf = Vec::new();
+    let mut buf = Vec::new();
 
-    // #[cfg(unix)]
-    // {
-    //     use std::os::unix::ffi::OsStrExt;
-    //     buf.extend(path.as_os_str().as_bytes());
-    //     buf.push(0);
-    // }
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        buf.extend(path.as_os_str().as_bytes());
+        buf.push(0);
+    }
 
-    // #[cfg(windows)]
-    // {
-    //     use std::os::windows::ffi::OsStrExt;
-    //     buf.extend(
-    //         path.as_os_str()
-    //             .encode_wide()
-    //             .chain(Some(0))
-    //             .map(|b| {
-    //                 let b = b.to_ne_bytes();
-    //                 b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
-    //             })
-    //             .flatten(),
-    //     );
-    // }
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        buf.extend(
+            path.as_os_str()
+                .encode_wide()
+                .chain(Some(0))
+                .map(|b| {
+                    let b = b.to_ne_bytes();
+                    b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
+                })
+                .flatten(),
+        );
+    }
 
-    // CString::new(buf).unwrap()
+    buf
 }

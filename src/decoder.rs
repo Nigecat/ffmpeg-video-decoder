@@ -1,7 +1,6 @@
 use super::{DecodeError, Dimensions, VideoSource};
-use crate::c::{path_to_cstring, read_stream, Stream};
+use crate::c::{path_to_raw, read_stream, Stream};
 use std::collections::VecDeque;
-use std::ffi::CString;
 use std::{ffi, mem, ptr};
 
 /// ffmpeg buffer size
@@ -112,14 +111,14 @@ impl VideoDecoder {
             }
 
             let path = match source {
-                VideoSource::Raw(_) => CString::default(),
-                VideoSource::Filesystem(path) => path_to_cstring(&path),
+                VideoSource::Raw(_) => ptr::null(),
+                VideoSource::Filesystem(path) => path_to_raw(&path).as_ptr(), // fixme this may cause a memory leak
             };
 
             // Open video
             if ffmpeg::avformat_open_input(
                 &mut input_ctx,
-                path.as_ptr(),
+                path as *const i8,
                 ptr::null_mut(),
                 ptr::null_mut(),
             ) != 0
