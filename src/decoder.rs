@@ -1,6 +1,6 @@
 use super::{DecodeError, Dimensions, VideoSource};
 use crate::c::{path_to_cstring, read_stream, Stream};
-use crossbeam::queue::ArrayQueue;
+use std::collections::VecDeque;
 use std::ffi::CString;
 use std::{ffi, mem, ptr};
 
@@ -54,7 +54,7 @@ pub struct VideoDecoder {
     /// The dimensions of the the decoded video
     dimensions: Dimensions,
     /// Internal frame buffer, as ffmpeg returns frames in chunks
-    buffer: ArrayQueue<Frame>,
+    buffer: VecDeque<Frame>,
     /// Whether we should loop the frames when we reach the end of the input data
     should_loop: bool,
 
@@ -78,16 +78,10 @@ impl VideoDecoder {
     ///
     /// * `source` - The input video data
     /// * `should_loop` - Whether the decoder should loop back to the start once reaching the end of the source data
-    /// * `frame_buffer_length` - The number of frames to keep in the internal buffer, set to `None` for a reasonable default
-    pub fn new<'source, S>(
-        source: S,
-        should_loop: bool,
-        frame_buffer_length: Option<usize>,
-    ) -> Result<Self, DecodeError>
+    pub fn new<'source, S>(source: S, should_loop: bool) -> Result<Self, DecodeError>
     where
         S: Into<VideoSource<'source>>,
     {
-        let frame_buffer_length = frame_buffer_length.unwrap(); // round to expected value (and document)
         let source: VideoSource = source.into();
 
         unsafe {
@@ -96,7 +90,7 @@ impl VideoDecoder {
             let mut avio: Option<*mut ffmpeg::AVIOContext> = None;
             let mut input_ctx: *mut ffmpeg::AVFormatContext = ffmpeg::avformat_alloc_context();
 
-            if let VideoSource::Raw(data) = source {
+            if let VideoSource::Raw(ref data) = source {
                 let mut stream = Stream {
                     length: data.len(),
                     offset: 0,
@@ -233,9 +227,9 @@ impl VideoDecoder {
                 rgb_frame,
                 raw_frame,
                 avio,
-                buffer: ArrayQueue::new(frame_buffer_length),
                 packet,
-                should_loop: false,
+                buffer: VecDeque::new(),
+                should_loop,
                 stream_id: stream_id as i32,
             })
         }
@@ -243,7 +237,57 @@ impl VideoDecoder {
 
     /// Get the next frame from the input, if `self.will_loop()` is `true` then this is guaranteed to never return `Ok(None)`.
     pub fn next_frame(&mut self) -> Result<Option<Frame>, DecodeError> {
-        unimplemented!();
+        if let Some(next) = self.buffer.pop_front() {
+            return Ok(Some(next));
+        }
+
+        unsafe {
+            let next_frame = ffmpeg::av_read_frame(self.input_ctx, &mut self.packet);
+            if next_frame < 0 {
+                // out of frames
+                if self.should_loop {
+                    // // Seek stream to start
+                    // let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
+                    // ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
+                    // ffmpeg::avformat_seek_file(self.input_ctx, self.stream_id, 0, 0, (*(*stream)).duration, 0);
+                    // return self.next_frame();
+                    todo!();
+                } else {
+                    return Ok(None);
+                }
+            }
+
+            // Check that this packet is in the right stream
+            if self.packet.stream_index == self.stream_id {
+                if ffmpeg::avcodec_send_packet(self.codec_ctx, &self.packet) < 0 {
+                    panic!("unable to sent packet to decoder"); // todo handle error properly
+                }
+
+                // Decode packet frames
+                while ffmpeg::avcodec_receive_frame(self.codec_ctx, self.raw_frame) >= 0 {
+                    // Convert frame to RGB24
+                    ffmpeg::sws_scale(
+                        self.sws_context,
+                        (*self.raw_frame).data.as_ptr() as *const *const _,
+                        (*self.raw_frame).linesize.as_ptr() as *mut _,
+                        0,
+                        (*self.codec_ctx).height as std::os::raw::c_int,
+                        (*self.rgb_frame).data.as_ptr() as *const *mut _,
+                        (*self.rgb_frame).linesize.as_ptr() as *mut _,
+                    );
+
+                    // Add to frame buffer
+                    self.buffer.push_back(Frame {
+                        data: std::mem::take(&mut self.texture_data),
+                        dimensions: self.dimensions,
+                    });
+                }
+            }
+
+            ffmpeg::av_packet_unref(&mut self.packet);
+        }
+
+        return self.next_frame();
     }
 
     /// Get the dimensions of the video

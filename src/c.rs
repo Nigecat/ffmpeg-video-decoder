@@ -6,9 +6,9 @@ use std::{cmp, ptr};
 
 #[repr(C)]
 pub struct Stream {
-    length: usize,
-    offset: usize,
-    data: *const u8,
+    pub length: usize,
+    pub offset: usize,
+    pub data: *const u8,
 }
 
 pub unsafe extern "C" fn read_stream(ptr: *mut ffi::c_void, buf: *mut u8, size: i32) -> i32 {
@@ -21,7 +21,7 @@ pub unsafe extern "C" fn read_stream(ptr: *mut ffi::c_void, buf: *mut u8, size: 
     size as i32
 }
 
-pub fn path_to_cstring(path: &Path) -> CString {
+pub fn path_to_cstring(_path: &Path) -> CString {
     unimplemented!();
 
     // let mut buf = Vec::new();

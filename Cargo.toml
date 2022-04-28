@@ -4,12 +4,13 @@ version = "0.0.1"
 edition = "2021"
 
 [features]
+default = ["parallel", "build", "image"]
+parallel = []
 image = ["dep:image"]
 build = ["ffmpeg/build"]
 
 [dependencies]
 thiserror = "1.0"
-crossbeam = "0.8.1"
 ffmpeg = { package = "ffmpeg-sys", version = "4.3.3" }
 
 image = { version = "0.24", optional = true }
