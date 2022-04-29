@@ -21,8 +21,6 @@ pub unsafe extern "C" fn read_stream(ptr: *mut ffi::c_void, buf: *mut u8, size: 
 }
 
 pub fn path_to_raw(path: &Path) -> Vec<u8> {
-    // source: https://stackoverflow.com/a/57667836
-
     let mut buf = Vec::new();
 
     #[cfg(unix)]
@@ -34,8 +32,11 @@ pub fn path_to_raw(path: &Path) -> Vec<u8> {
 
     #[cfg(windows)]
     {
-        // fixme may not work with non UTF-8 strings
-        buf.extend(path.to_string_lossy().as_bytes());
+        buf.extend(
+            path.to_str()
+                .expect("expected valid unicode path")
+                .as_bytes(),
+        );
         buf.push(0);
     }
 
