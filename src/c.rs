@@ -20,25 +20,9 @@ pub unsafe extern "C" fn read_stream(ptr: *mut ffi::c_void, buf: *mut u8, size: 
     size as i32
 }
 
-pub fn path_to_raw(path: &Path) -> Vec<u8> {
+pub fn path_to_raw(path: &Path) -> Option<Vec<u8>> {
     let mut buf = Vec::new();
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::ffi::OsStrExt;
-        buf.extend(path.as_os_str().as_bytes());
-        buf.push(0);
-    }
-
-    #[cfg(windows)]
-    {
-        buf.extend(
-            path.to_str()
-                .expect("expected valid unicode path")
-                .as_bytes(),
-        );
-        buf.push(0);
-    }
-
-    buf
+    buf.extend(path.to_str()?.as_bytes());
+    buf.push(0);
+    Some(buf)
 }

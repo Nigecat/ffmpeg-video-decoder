@@ -126,7 +126,7 @@ impl VideoDecoder {
             let path = match source {
                 VideoSource::Raw(_) => ptr::null(),
                 VideoSource::Filesystem(ref path) => {
-                    _source_path_raw = path_to_raw(path);
+                    _source_path_raw = path_to_raw(path).ok_or(DecodeError::InvalidSource)?;
                     _source_path_raw.as_ptr()
                 }
             };

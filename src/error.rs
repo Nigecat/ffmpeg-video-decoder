@@ -2,6 +2,8 @@
 #[non_exhaustive]
 #[derive(thiserror::Error, Debug)]
 pub enum DecodeError {
+    #[error("source path was not a valid unicode string")]
+    InvalidSource,
     #[error("unable to open input data")]
     UnableToOpenInput,
     #[error("unable to read stream information")]
