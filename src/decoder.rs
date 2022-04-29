@@ -110,9 +110,13 @@ impl VideoDecoder {
                 (*input_ctx).flags |= ffmpeg::AVFMT_FLAG_CUSTOM_IO;
             }
 
+            let mut _source_path_raw = Vec::new();
             let path = match source {
                 VideoSource::Raw(_) => ptr::null(),
-                VideoSource::Filesystem(path) => path_to_raw(&path).as_ptr(), // fixme this may cause a memory leak
+                VideoSource::Filesystem(path) => {
+                    _source_path_raw = path_to_raw(&path);
+                    _source_path_raw.as_ptr()
+                }
             };
 
             // Open video
@@ -245,12 +249,11 @@ impl VideoDecoder {
             if next_frame < 0 {
                 // out of frames
                 if self.should_loop {
-                    // // Seek stream to start
-                    // let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
-                    // ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
-                    // ffmpeg::avformat_seek_file(self.input_ctx, self.stream_id, 0, 0, (*(*stream)).duration, 0);
-                    // return self.next_frame();
-                    todo!();
+                    // Seek stream to start
+                    let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
+                    ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
+                    ffmpeg::avformat_seek_file(self.input_ctx, self.stream_id, 0, 0, (*(*stream)).duration, 0);
+                    return self.next_frame();
                 } else {
                     return Ok(None);
                 }
@@ -277,7 +280,7 @@ impl VideoDecoder {
 
                     // Add to frame buffer
                     self.buffer.push_back(Frame {
-                        data: std::mem::take(&mut self.texture_data),
+                        data: self.texture_data.clone(),
                         dimensions: self.dimensions,
                     });
                 }
