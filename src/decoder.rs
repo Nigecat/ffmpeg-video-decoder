@@ -8,11 +8,18 @@ const BUFFER_SIZE: usize = 8192;
 
 /// A single frame from a decoded video
 pub struct Frame {
+    index: usize,
     data: Vec<u8>,
     dimensions: Dimensions,
 }
 
 impl Frame {
+    /// The frame number in the source video (starts at 1)
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
     /// Get the dimensions of the frame data
     #[inline]
     pub fn dimensions(&self) -> Dimensions {
@@ -56,6 +63,8 @@ pub struct VideoDecoder {
     buffer: VecDeque<Frame>,
     /// Whether we should loop the frames when we reach the end of the input data
     should_loop: bool,
+    /// The next frame index
+    index: usize,
 
     /// The source data, we must store it so the pointer passed to ffmpeg is not dropped
     _source: VideoSource,
@@ -229,6 +238,7 @@ impl VideoDecoder {
                 codec_ctx,
                 input_ctx,
                 texture_data,
+                index: 1, // first frame is frame 1
                 sws_context,
                 rgb_frame,
                 raw_frame,
@@ -264,6 +274,8 @@ impl VideoDecoder {
                         (*(*stream)).duration,
                         0,
                     );
+                    // Reset index
+                    self.index = 1;
                     return self.next_frame();
                 } else {
                     return Ok(None);
@@ -291,9 +303,11 @@ impl VideoDecoder {
 
                     // Add to frame buffer
                     self.buffer.push_back(Frame {
+                        index: self.index,
                         data: self.texture_data.clone(),
                         dimensions: self.dimensions,
                     });
+                    self.index += 1;
                 }
             }
 
