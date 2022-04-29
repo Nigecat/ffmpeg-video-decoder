@@ -14,4 +14,6 @@ pub enum DecodeError {
     UnsupportedCodec,
     #[error("could not read frame buffer")]
     UnableToReadFrameBuffer,
+    #[error("unable to sent packet to decoder")]
+    UnableToSendPacketToDecoder,
 }

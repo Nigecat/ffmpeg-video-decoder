@@ -252,7 +252,14 @@ impl VideoDecoder {
                     // Seek stream to start
                     let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
                     ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
-                    ffmpeg::avformat_seek_file(self.input_ctx, self.stream_id, 0, 0, (*(*stream)).duration, 0);
+                    ffmpeg::avformat_seek_file(
+                        self.input_ctx,
+                        self.stream_id,
+                        0,
+                        0,
+                        (*(*stream)).duration,
+                        0,
+                    );
                     return self.next_frame();
                 } else {
                     return Ok(None);
@@ -262,7 +269,7 @@ impl VideoDecoder {
             // Check that this packet is in the right stream
             if self.packet.stream_index == self.stream_id {
                 if ffmpeg::avcodec_send_packet(self.codec_ctx, &self.packet) < 0 {
-                    panic!("unable to sent packet to decoder"); // todo handle error properly
+                    return Err(DecodeError::UnableToSendPacketToDecoder);
                 }
 
                 // Decode packet frames
@@ -289,7 +296,7 @@ impl VideoDecoder {
             ffmpeg::av_packet_unref(&mut self.packet);
         }
 
-        return self.next_frame();
+        self.next_frame()
     }
 
     /// Get the dimensions of the video
