@@ -1,7 +1,7 @@
 use ffmpeg_video_decoder::VideoDecoder;
 
 fn main() {
-    // let source: &[u8] = include_bytes!("../test.mp4");
+    // let source: Vec<u8> = include_bytes!("../test.mp4").to_vec();
     let source = std::path::PathBuf::from("test.mp4");
     let mut decoder = VideoDecoder::new(source, false).unwrap();
 

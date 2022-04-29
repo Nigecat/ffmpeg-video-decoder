@@ -57,6 +57,9 @@ pub struct VideoDecoder {
     /// Whether we should loop the frames when we reach the end of the input data
     should_loop: bool,
 
+    /// The source data, we must store it so the pointer passed to ffmpeg is not dropped
+    _source: VideoSource,
+
     // -------------- ffmpeg data --------------
     texture_data: Vec<u8>,
     sws_context: *mut ffmpeg::SwsContext,
@@ -77,9 +80,9 @@ impl VideoDecoder {
     ///
     /// * `source` - The input video data
     /// * `should_loop` - Whether the decoder should loop back to the start once reaching the end of the source data
-    pub fn new<'source, S>(source: S, should_loop: bool) -> Result<Self, DecodeError>
+    pub fn new<S>(source: S, should_loop: bool) -> Result<Self, DecodeError>
     where
-        S: Into<VideoSource<'source>>,
+        S: Into<VideoSource>,
     {
         let source: VideoSource = source.into();
 
@@ -113,7 +116,7 @@ impl VideoDecoder {
             let mut _source_path_raw = Vec::new();
             let path = match source {
                 VideoSource::Raw(_) => ptr::null(),
-                VideoSource::Filesystem(path) => {
+                VideoSource::Filesystem(ref path) => {
                     _source_path_raw = path_to_raw(&path);
                     _source_path_raw.as_ptr()
                 }
@@ -229,6 +232,7 @@ impl VideoDecoder {
                 sws_context,
                 rgb_frame,
                 raw_frame,
+                _source: source,
                 avio,
                 packet,
                 buffer: VecDeque::new(),

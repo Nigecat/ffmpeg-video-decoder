@@ -34,17 +34,9 @@ pub fn path_to_raw(path: &Path) -> Vec<u8> {
 
     #[cfg(windows)]
     {
-        use std::os::windows::ffi::OsStrExt;
-        buf.extend(
-            path.as_os_str()
-                .encode_wide()
-                .chain(Some(0))
-                .map(|b| {
-                    let b = b.to_ne_bytes();
-                    b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
-                })
-                .flatten(),
-        );
+        // fixme may not work with non UTF-8 strings
+        buf.extend(path.to_string_lossy().as_bytes());
+        buf.push(0);
     }
 
     buf
