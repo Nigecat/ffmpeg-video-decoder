@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 /// The input data for the decoder
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum VideoSource {
     /// Raw binary data
