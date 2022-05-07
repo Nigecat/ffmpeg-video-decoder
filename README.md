@@ -18,4 +18,4 @@ let decoder = VideoDecoder::new("video.mp4", false);
 let first_frame = decoder.next_frame().unwrap();
 ```
 
-See https://github.com/Nigecat/ffmpeg-video-decoder for the full docs.
+See https://github.com/Nigecat/ffmpeg-video-decoder/docs for the full docs.
