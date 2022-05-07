@@ -44,8 +44,9 @@ impl Frame {
         (self.data, self.dimensions)
     }
 
-    /// Convert this frame into an [`image::DynamicImage`]
+    /// Convert this frame into a [image::DynamicImage](https://docs.rs/image/latest/image/enum.DynamicImage.html)
     #[cfg(feature = "image")]
+    #[doc(cfg(feature = "image"))]
     pub fn into_image(self) -> image::DynamicImage {
         image::DynamicImage::ImageRgb8(
             image::ImageBuffer::from_raw(self.dimensions.width, self.dimensions.height, self.data)
@@ -54,6 +55,37 @@ impl Frame {
     }
 }
 
+/// A video decoder
+///
+/// ## Usage
+///
+/// Simply create a [`VideoDecoder`] then call [`VideoDecoder::next_frame`]:
+///
+/// ```rust
+/// # fn main() {
+/// use ffmpeg_video_decoder::VideoDecoder;
+///
+/// let mut decoder = VideoDecoder::new("video.mp4", false).unwrap();
+/// let first_frame = decoder.next_frame().unwrap();
+/// let second_frame = decoder.next_frame().unwrap();
+/// // etc...
+/// # }
+/// ```
+///
+/// <br>
+///
+/// ALternatively, a `while let` loop can be used to iterate over frames:
+///
+/// ```rust
+/// # fn main() {
+/// use ffmpeg_video_decoder::VideoDecoder;
+///
+/// let mut decoder = VideoDecoder::new("video.mp4", false).unwrap();
+/// while let Some(next_frame) = decoder.next_frame().unwrap() {
+///     // do something with the frame
+/// }
+/// # }
+/// ```
 pub struct VideoDecoder {
     /// The framerate of the decoded video
     framerate: f32,
@@ -252,7 +284,7 @@ impl VideoDecoder {
         }
     }
 
-    /// Get the next frame from the input, if `self.will_loop()` is `true` then this is guaranteed to never return `Ok(None)`.
+    /// Get the next frame from the input, if [`VideoDecoder::will_loop`] is `true` then this is guaranteed to never return `Ok(None)`.
     pub fn next_frame(&mut self) -> Result<Option<Frame>, DecodeError> {
         if let Some(next) = self.buffer.pop_front() {
             return Ok(Some(next));
@@ -330,6 +362,22 @@ impl VideoDecoder {
     }
 
     /// Check whether the decoder will loop once reaching the end of the source data
+    /// 
+    /// This will be whatever value was passed to [`VideoDecoder::new`].
+    /// ```rust
+    /// # fn main() {
+    /// # use ffmpeg_video_decoder::VideoDecoder;
+    ///  let decoder = VideoDecoder::new("test.mp4", true).unwrap();
+    ///  assert_eq!(decoder.will_loop(), true);
+    /// # }
+    /// ```
+    /// ```rust
+    /// # fn main() {
+    /// # use ffmpeg_video_decoder::VideoDecoder;
+    ///  let decoder = VideoDecoder::new("test.mp4", false).unwrap();
+    ///  assert_eq!(decoder.will_loop(), false);
+    /// # }
+    /// ```
     #[inline]
     pub fn will_loop(&self) -> bool {
         self.should_loop

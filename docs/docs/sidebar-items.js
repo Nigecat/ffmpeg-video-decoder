@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["DecodeError","An error from the decoder"],["VideoSource","The input data for the decoder"]],"struct":[["Dimensions","The height and width of something"],["Frame","A single frame from a decoded video"],["VideoDecoder","A video decoder"]]});

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-rm -r docs
-cargo doc --no-deps --open "$@"
+rm -rv docs
+cargo +nightly doc --no-deps --open --features image "$@" 
 mv -v target/doc docs
-echo "<meta http-equiv=\"refresh\" content=\"0; url=ffmpeg_video_decoder\">" > docs/index.html
+mv -v docs/ffmpeg_video_decoder docs/docs
+echo "<meta http-equiv=\"refresh\" content=\"0; url=docs\">" > docs/index.html
