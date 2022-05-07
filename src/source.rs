@@ -21,3 +21,15 @@ impl From<Vec<u8>> for VideoSource {
         Self::Raw(data)
     }
 }
+
+impl From<String> for VideoSource {
+    fn from(s: String) -> Self {
+        PathBuf::from(s).into()
+    }
+}
+
+impl From<&str> for VideoSource {
+    fn from(s: &str) -> Self {
+        s.to_string().into()
+    }
+}
