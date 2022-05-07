@@ -4,7 +4,6 @@ version = "0.0.1"
 edition = "2021"
 
 [features]
-parallel = []
 image = ["dep:image"]
 build = ["ffmpeg/build"]
 
