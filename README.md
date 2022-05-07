@@ -1,5 +1,14 @@
 # ffmpeg-video-decoder
-A simple (safe) wrapper around ffmpeg-sys to provide a basic video decoder
+A simple (safe) wrapper around ffmpeg-sys to provide a basic video decoder.
+
+## Installation
+
+Since this crate is not in the repository index, the dependency must be added as a git dependency as follows:
+
+```toml
+[dependencies]
+ffmpeg-video-decoder = { git = "https://github.com/Nigecat/ffmpeg-video-decoder" }
+```
 
 ## Usage
 
