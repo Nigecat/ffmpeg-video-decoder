@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["ffmpeg_video_decoder"];
