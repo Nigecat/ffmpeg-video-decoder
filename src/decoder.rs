@@ -74,7 +74,7 @@ impl Frame {
 ///
 /// <br>
 ///
-/// ALternatively, a `while let` loop can be used to iterate over frames:
+/// Alternatively, a `while let` loop can be used to iterate over frames:
 ///
 /// ```rust
 /// # fn main() {
