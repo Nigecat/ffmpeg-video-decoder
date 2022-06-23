@@ -1,5 +1,6 @@
 use super::{DecodeError, Dimensions, VideoSource};
 use crate::c::{path_to_raw, read_stream, Stream};
+use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::{ffi, mem, ptr};
 
@@ -295,19 +296,7 @@ impl VideoDecoder {
             if next_frame < 0 {
                 // out of frames
                 if self.should_loop {
-                    // Seek stream to start
-                    let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
-                    ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
-                    ffmpeg::avformat_seek_file(
-                        self.input_ctx,
-                        self.stream_id,
-                        0,
-                        0,
-                        (*(*stream)).duration,
-                        0,
-                    );
-                    // Reset index
-                    self.index = 1;
+                    self.loop_ctx();
                     return self.next_frame();
                 } else {
                     return Ok(None);
@@ -349,6 +338,86 @@ impl VideoDecoder {
         self.next_frame()
     }
 
+    /// Skip the next `n` frames.
+    ///
+    /// Note that this function will never loop (even if [`VideoDecoder::will_loop`] is `true`).
+    pub fn skip(&mut self, n: isize) {
+        let frames = n;
+
+        match frames.cmp(&0) {
+            Ordering::Greater => {
+                let mut frames = frames as usize;
+
+                // Clear frame buffer
+                if !self.buffer.is_empty() && self.buffer.len() <= frames {
+                    let limit = match self.buffer.len() <= frames {
+                        true => self.buffer.len(),
+                        false => frames,
+                    };
+
+                    self.buffer.drain(..=limit);
+                    frames -= limit;
+                }
+
+                while frames > 0 {
+                    unsafe {
+                        let next_frame = ffmpeg::av_read_frame(self.input_ctx, &mut self.packet);
+                        if next_frame < 0 {
+                            // out of frames
+                            return;
+                        }
+
+                        // Check that this packet is in the right stream
+                        if self.packet.stream_index == self.stream_id {
+                            if ffmpeg::avcodec_send_packet(self.codec_ctx, &self.packet) < 0 {
+                                // If we can't decode the packet, ignore it
+                                // (this does not count toward the skipped frames, but this may change in the future)
+                                continue;
+                            }
+
+                            // Read packet frames
+                            while ffmpeg::avcodec_receive_frame(self.codec_ctx, self.raw_frame) >= 0
+                            {
+                                frames -= 1;
+
+                                // Update frame index
+                                self.index += 1;
+
+                                // Packet may contain multiple frames,
+                                //      so we need to check every frame to prevent this from underflowing
+                                if frames == 0 {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Ordering::Less => {
+                // optimize there is probably a better way to do this
+
+                // Determine how many frames we need go to from the start
+                let offset = self
+                    .index
+                    // This is needed to account for the fact that the index is the index for the next frame
+                    .saturating_sub(2)
+                    .saturating_sub(frames.abs() as usize);
+
+                // Reset to start
+                self.loop_ctx();
+
+                // Skip offset
+                if offset > isize::MAX as usize {
+                    self.skip(isize::MAX);
+                    self.skip((offset - isize::MAX as usize) as isize);
+                } else {
+                    self.skip(offset as isize);
+                }
+            }
+            Ordering::Equal => (),
+        }
+    }
+
     /// Get the dimensions of the video
     #[inline]
     pub fn dimensions(&self) -> Dimensions {
@@ -362,7 +431,7 @@ impl VideoDecoder {
     }
 
     /// Check whether the decoder will loop once reaching the end of the source data
-    /// 
+    ///
     /// This will be whatever value was passed to [`VideoDecoder::new`].
     /// ```rust
     /// # fn main() {
@@ -381,6 +450,26 @@ impl VideoDecoder {
     #[inline]
     pub fn will_loop(&self) -> bool {
         self.should_loop
+    }
+
+    /// Loop the internal decoder context, this will reset the video to the first frame.
+    fn loop_ctx(&mut self) {
+        unsafe {
+            // Seek stream to start
+            let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
+            ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
+            ffmpeg::avformat_seek_file(
+                self.input_ctx,
+                self.stream_id,
+                0,
+                0,
+                (*(*stream)).duration,
+                0,
+            );
+        }
+
+        // Reset index
+        self.index = 1;
     }
 }
 

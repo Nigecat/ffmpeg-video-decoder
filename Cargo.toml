@@ -1,9 +1,11 @@
 [package]
 name = "ffmpeg-video-decoder"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
+authors = ["Nigecat <development@nigelq.com>"]
 
 [features]
+default = ["build"]
 image = ["dep:image"]
 build = ["ffmpeg/build"]
 
