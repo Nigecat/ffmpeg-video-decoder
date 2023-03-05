@@ -1,12 +1,9 @@
-#![cfg_attr(doc, feature(doc_cfg))]
-
 mod c;
 mod decoder;
 mod error;
 mod source;
 
 #[cfg(feature = "image")]
-#[doc(cfg(feature = "image"))]
 pub use image;
 
 pub use decoder::{Frame, VideoDecoder};

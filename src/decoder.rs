@@ -47,7 +47,6 @@ impl Frame {
 
     /// Convert this frame into a [image::DynamicImage](https://docs.rs/image/latest/image/enum.DynamicImage.html)
     #[cfg(feature = "image")]
-    #[doc(cfg(feature = "image"))]
     pub fn into_image(self) -> image::DynamicImage {
         image::DynamicImage::ImageRgb8(
             image::ImageBuffer::from_raw(self.dimensions.width, self.dimensions.height, self.data)
