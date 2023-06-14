@@ -1,6 +1,6 @@
 [package]
 name = "ffmpeg-video-decoder"
-version = "0.0.4"
+version = "0.2.0"
 edition = "2021"
 authors = ["Nigecat <development@nigelq.com>"]
 
@@ -11,6 +11,6 @@ build = ["ffmpeg/build"]
 
 [dependencies]
 thiserror = "1.0"
-ffmpeg = { package = "ffmpeg-sys", version = "4.3.3" }
+ffmpeg = { package = "ffmpeg-sys-next", version = "6.0.1" }
 
 image = { version = "0.24", optional = true }

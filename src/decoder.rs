@@ -7,6 +7,9 @@ use std::{ffi, mem, ptr};
 /// ffmpeg buffer size
 const BUFFER_SIZE: usize = 8192;
 
+// ffmpeg buffer alignment (this is unrelated to the previous constant)
+const BUFFER_ALIGNMENT: std::ffi::c_int = 32; // 256 bits
+
 /// A single frame from a decoded video
 pub struct Frame {
     index: usize,
@@ -65,7 +68,9 @@ impl Frame {
 /// # fn main() {
 /// use ffmpeg_video_decoder::VideoDecoder;
 ///
-/// let mut decoder = VideoDecoder::new("video.mp4", false).unwrap();
+/// let file = "video.mp4";
+/// # let file = "test.mp4";
+/// let mut decoder = VideoDecoder::new(file, false).unwrap();
 /// let first_frame = decoder.next_frame().unwrap();
 /// let second_frame = decoder.next_frame().unwrap();
 /// // etc...
@@ -80,7 +85,9 @@ impl Frame {
 /// # fn main() {
 /// use ffmpeg_video_decoder::VideoDecoder;
 ///
-/// let mut decoder = VideoDecoder::new("video.mp4", false).unwrap();
+/// let file = "video.mp4";
+/// # let file = "test.mp4";
+/// let mut decoder = VideoDecoder::new(file, false).unwrap();
 /// while let Some(next_frame) = decoder.next_frame().unwrap() {
 ///     // do something with the frame
 /// }
@@ -180,11 +187,11 @@ impl VideoDecoder {
             }
 
             // Find video stream
-            let (stream_ctx, stream_id) = {
+            let (codecpar, stream_id) = {
                 let mut stream_id = None;
 
                 for i in 0..(*input_ctx).nb_streams as isize {
-                    if (*(*(*(*input_ctx).streams.offset(i))).codec).codec_type
+                    if (*(*(*(*input_ctx).streams.offset(i))).codecpar).codec_type
                         == ffmpeg::AVMediaType::AVMEDIA_TYPE_VIDEO
                     {
                         stream_id = Some(i);
@@ -194,12 +201,12 @@ impl VideoDecoder {
 
                 let stream_id = stream_id.ok_or(DecodeError::UnableToFindVideoStream)?;
                 (
-                    (*(*(*input_ctx).streams.offset(stream_id))).codec,
+                    (*(*(*input_ctx).streams.offset(stream_id))).codecpar,
                     stream_id,
                 )
             };
 
-            let codec = ffmpeg::avcodec_find_decoder((*stream_ctx).codec_id);
+            let codec = ffmpeg::avcodec_find_decoder((*codecpar).codec_id);
             if codec.is_null() {
                 return Err(DecodeError::UnsupportedCodec);
             }
@@ -207,10 +214,7 @@ impl VideoDecoder {
             // Duplicate codec so we can reuse the input context
             let codec_ctx = {
                 let codec_ctx = ffmpeg::avcodec_alloc_context3(codec);
-                let mut params = ffmpeg::avcodec_parameters_alloc();
-                ffmpeg::avcodec_parameters_from_context(params, stream_ctx);
-                ffmpeg::avcodec_parameters_to_context(codec_ctx, params);
-                ffmpeg::avcodec_parameters_free(&mut params);
+                ffmpeg::avcodec_parameters_to_context(codec_ctx, codecpar);
                 codec_ctx
             };
 
@@ -223,20 +227,23 @@ impl VideoDecoder {
             let raw_frame = ffmpeg::av_frame_alloc();
             let rgb_frame = ffmpeg::av_frame_alloc();
 
-            let buffer_size = ffmpeg::avpicture_get_size(
+            let buffer_size = ffmpeg::av_image_get_buffer_size(
                 ffmpeg::AVPixelFormat::AV_PIX_FMT_RGB24,
                 (*codec_ctx).width,
                 (*codec_ctx).height,
+                BUFFER_ALIGNMENT,
             ) as usize;
 
             let mut texture_data: Vec<u8> = vec![0; buffer_size];
 
-            if ffmpeg::avpicture_fill(
-                rgb_frame as *mut ffmpeg::AVPicture,
+            if ffmpeg::av_image_fill_arrays(
+                (*rgb_frame).data.as_mut_ptr(),
+                (*rgb_frame).linesize.as_mut_ptr(),
                 texture_data.as_mut_ptr(),
                 ffmpeg::AVPixelFormat::AV_PIX_FMT_RGB24,
                 (*codec_ctx).width,
                 (*codec_ctx).height,
+                BUFFER_ALIGNMENT,
             ) <= 0
             {
                 return Err(DecodeError::UnableToReadFrameBuffer);
