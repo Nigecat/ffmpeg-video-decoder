@@ -407,7 +407,7 @@ impl VideoDecoder {
                     .index
                     // This is needed to account for the fact that the index is the index for the next frame
                     .saturating_sub(2)
-                    .saturating_sub(frames.abs() as usize);
+                    .saturating_sub(frames.unsigned_abs());
 
                 // Reset to start
                 self.loop_ctx();
