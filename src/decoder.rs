@@ -324,7 +324,7 @@ impl VideoDecoder {
                         (*self.raw_frame).linesize.as_ptr() as *mut _,
                         0,
                         (*self.codec_ctx).height as std::os::raw::c_int,
-                        (*self.rgb_frame).data.as_ptr() as *const *mut _,
+                        (*self.rgb_frame).data.as_ptr(),
                         (*self.rgb_frame).linesize.as_ptr() as *mut _,
                     );
 
@@ -463,7 +463,7 @@ impl VideoDecoder {
         unsafe {
             // Seek stream to start
             let stream = (*self.input_ctx).streams.offset(self.stream_id as isize);
-            ffmpeg::avio_seek((*self.input_ctx).pb, 0, ffmpeg::SEEK_SET);
+            ffmpeg::avio_seek((*self.input_ctx).pb, 0, 0);
             ffmpeg::avformat_seek_file(
                 self.input_ctx,
                 self.stream_id,
