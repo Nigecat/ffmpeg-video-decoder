@@ -257,7 +257,7 @@ impl VideoDecoder {
                 (*codec_ctx).width,                      // Destination
                 (*codec_ctx).height,                     // Destination
                 ffmpeg::AVPixelFormat::AV_PIX_FMT_RGB24, // Destination
-                ffmpeg::SWS_BILINEAR,
+                ffmpeg::SwsFlags::SWS_BILINEAR as i32,
                 ptr::null_mut(),
                 ptr::null_mut(),
                 ptr::null_mut(),
@@ -488,7 +488,7 @@ impl Drop for VideoDecoder {
             if let Some(mut avio) = self.avio {
                 ffmpeg::avio_context_free(&mut avio);
             }
-            ffmpeg::avcodec_close(self.codec_ctx);
+            ffmpeg::avcodec_free_context(&mut self.codec_ctx);
             ffmpeg::avcodec_free_context(&mut self.codec_ctx);
             ffmpeg::avformat_close_input(&mut self.input_ctx);
         }

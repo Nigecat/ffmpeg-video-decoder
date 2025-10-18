@@ -10,6 +10,6 @@ image = ["dep:image"]
 
 [dependencies]
 thiserror = "1.0"
-ffmpeg = { package = "ffmpeg-sys-the-third", version = "2.0.0" }
+ffmpeg = { package = "ffmpeg-sys-the-third", version = "4" }
 
 image = { version = "0.25", optional = true }
